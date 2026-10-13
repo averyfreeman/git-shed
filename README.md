@@ -2,6 +2,8 @@
 
 Audit Git checkouts, publish reviewed work, and move recoverable checkouts to system Trash in batches. Go application for macOS and Linux. It defaults to scanning `$HOME/build`.
 
+[![Go Reference](https://pkg.go.dev/badge/github.com/averyfreeman/git-shed/README.md.svg)](https://pkg.go.dev/github.com/averyfreeman/git-shed/README.md)
+
 ## Build and install
 
 Requires Go 1.24 or newer and Git 2.23 or newer. GitHub repository creation also requires an authenticated `gh` CLI (`gh auth login`). macOS builds require cgo and Apple's command-line tools to call Foundation's native Trash API; the resulting executable does not require Go at runtime.

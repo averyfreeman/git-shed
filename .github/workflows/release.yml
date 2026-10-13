@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     tags:
-      - '*.*.*'
+      - 'v*.*.*'
 
 permissions:
   contents: read
@@ -21,6 +21,14 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
+      - name: Validate Go module tag
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          if [[ ! "$TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "Go module releases require a stable SemVer tag such as v0.1.0; got $TAG" >&2
+            exit 1
+          fi
       - run: go test ./...
       - uses: goreleaser/goreleaser-action@v6
         with:
@@ -52,17 +60,19 @@ jobs:
           cache: true
       - name: Build native macOS binary
         env:
-          VERSION: ${{ github.ref_name }}
+          TAG: ${{ github.ref_name }}
         run: |
+          VERSION="${TAG#v}"
           mkdir -p dist/pkgroot/usr/local/bin
           go build -trimpath -ldflags="-s -w -X main.version=${VERSION}" -o dist/pkgroot/usr/local/bin/git-shed .
           chmod 755 dist/pkgroot/usr/local/bin/git-shed
           dist/pkgroot/usr/local/bin/git-shed version
       - name: Build installer package
         env:
-          VERSION: ${{ github.ref_name }}
+          TAG: ${{ github.ref_name }}
           ARCH: ${{ matrix.arch }}
         run: |
+          VERSION="${TAG#v}"
           mkdir -p dist
           sudo xattr -cr dist/pkgroot
           if xattr -lr dist/pkgroot | grep -q .; then
@@ -79,9 +89,11 @@ jobs:
       - name: Upload macOS package
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VERSION: ${{ github.ref_name }}
+          TAG: ${{ github.ref_name }}
           ARCH: ${{ matrix.arch }}
-        run: gh release upload "$VERSION" dist/git-shed_"$VERSION"_darwin_"$ARCH".pkg dist/git-shed_"$VERSION"_darwin_"$ARCH".pkg.sha256
+        run: |
+          VERSION="${TAG#v}"
+          gh release upload "$TAG" dist/git-shed_"$VERSION"_darwin_"$ARCH".pkg dist/git-shed_"$VERSION"_darwin_"$ARCH".pkg.sha256 --clobber
 
   publish:
     needs: macos-pkg
@@ -92,5 +104,31 @@ jobs:
       - name: Publish complete release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VERSION: ${{ github.ref_name }}
-        run: gh release edit "$VERSION" --repo "$GITHUB_REPOSITORY" --draft=false
+          TAG: ${{ github.ref_name }}
+        run: gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false
+
+  go-module-index:
+    needs: publish
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.ref }}
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Request Go module proxy indexing
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          module_path="$(go list -m)"
+          for attempt in $(seq 1 12); do
+            if GOPROXY=https://proxy.golang.org GOSUMDB=sum.golang.org go list -m "${module_path}@${TAG}"; then
+              exit 0
+            fi
+            echo "Go proxy has not indexed ${module_path}@${TAG} yet (attempt ${attempt}/12)"
+            sleep 10
+          done
+          echo "Go proxy did not index ${module_path}@${TAG} after 120 seconds" >&2
+          exit 1
