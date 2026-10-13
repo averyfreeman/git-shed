@@ -93,4 +93,4 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ github.ref_name }}
-        run: gh release edit "$VERSION" --draft=false
+        run: gh release edit "$VERSION" --repo "$GITHUB_REPOSITORY" --draft=false
