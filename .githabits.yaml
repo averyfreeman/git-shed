@@ -1,11 +1,15 @@
 schema_version: 1.0.0
 version: 1
-profile: guided
+# For every substantive change, commit and release after validation, then push
+# the branch and its tag to origin. Use major for breaking changes, minor for
+# new features, and patch for other substantive changes. Keep Go tags prefixed
+# with "v" (vMAJOR.MINOR.PATCH). Never force-push.
+profile: autonomous
 branch: main
 versioning: semver
 initial_tag: v0.1.0
 commit_style: conventional-commits
-semantic_release: false
+semantic_release: true
 actions:
     init: true
     branch: true
