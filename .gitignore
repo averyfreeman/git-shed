@@ -6,8 +6,12 @@
 # Local audit data may include private checkout paths, origins, and filenames.
 /reports/
 /VALIDATION.md
-audit.*
-*-audit.*
+**/audit.json
+**/audit.csv
+**/audit.md
+**/*-audit.json
+**/*-audit.csv
+**/*-audit.md
 
 # Local credentials and signing material
 .env
