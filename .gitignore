@@ -1,0 +1,25 @@
+# Build and package outputs
+/bin/
+/dist/
+*.test
+
+# Local audit data may include private checkout paths, origins, and filenames.
+/reports/
+/VALIDATION.md
+audit.*
+*-audit.*
+
+# Local credentials and signing material
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+*.key
+
+# Editor and operating-system state
+.DS_Store
+*.swp
+*.swo
+*.bak
+*.log

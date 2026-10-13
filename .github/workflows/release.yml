@@ -1,0 +1,96 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - '*.*.*'
+
+permissions:
+  contents: read
+
+jobs:
+  linux:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+      - run: go test ./...
+      - uses: goreleaser/goreleaser-action@v6
+        with:
+          version: v2.18.3
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  macos-pkg:
+    needs: linux
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15-intel
+            arch: amd64
+          - runner: macos-15
+            arch: arm64
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.ref }}
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Build native macOS binary
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: |
+          mkdir -p dist/pkgroot/usr/local/bin
+          go build -trimpath -ldflags="-s -w -X main.version=${VERSION}" -o dist/pkgroot/usr/local/bin/git-shed .
+          chmod 755 dist/pkgroot/usr/local/bin/git-shed
+          dist/pkgroot/usr/local/bin/git-shed version
+      - name: Build installer package
+        env:
+          VERSION: ${{ github.ref_name }}
+          ARCH: ${{ matrix.arch }}
+        run: |
+          mkdir -p dist
+          sudo xattr -cr dist/pkgroot
+          if xattr -lr dist/pkgroot | grep -q .; then
+            echo "package staging still has extended attributes" >&2
+            exit 1
+          fi
+          pkgbuild \
+            --root dist/pkgroot \
+            --identifier com.github.averyfreeman.git-shed \
+            --version "$VERSION" \
+            --install-location / \
+            "dist/git-shed_${VERSION}_darwin_${ARCH}.pkg"
+          shasum -a 256 "dist/git-shed_${VERSION}_darwin_${ARCH}.pkg" > "dist/git-shed_${VERSION}_darwin_${ARCH}.pkg.sha256"
+      - name: Upload macOS package
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ github.ref_name }}
+          ARCH: ${{ matrix.arch }}
+        run: gh release upload "$VERSION" dist/git-shed_"$VERSION"_darwin_"$ARCH".pkg dist/git-shed_"$VERSION"_darwin_"$ARCH".pkg.sha256
+
+  publish:
+    needs: macos-pkg
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Publish complete release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ github.ref_name }}
+        run: gh release edit "$VERSION" --draft=false

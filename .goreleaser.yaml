@@ -1,0 +1,53 @@
+version: 2
+project_name: git-shed
+
+builds:
+  - id: git-shed-linux
+    main: .
+    binary: git-shed
+    goos: [linux]
+    goarch: [amd64]
+    env:
+      - CGO_ENABLED=0
+    ldflags:
+      - -s -w -X main.version={{.Version}}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+archives:
+  - id: linux-archives
+    ids: [git-shed-linux]
+    formats: [tar.gz]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+      - README.md
+
+nfpms:
+  - id: linux-packages
+    package_name: git-shed
+    ids: [git-shed-linux]
+    vendor: Avery Freeman
+    homepage: https://github.com/averyfreeman/git-shed
+    maintainer: Avery Freeman
+    description: Audit Git checkouts, publish reviewed work, and move recoverable checkouts to Trash.
+    license: MIT
+    formats: [deb, rpm, archlinux]
+    bindir: /usr/bin
+    contents:
+      - src: ./LICENSE
+        dst: /usr/share/licenses/git-shed/LICENSE
+        packager: rpm
+      - src: ./LICENSE
+        dst: /usr/share/licenses/git-shed/LICENSE
+        packager: archlinux
+
+checksum:
+  name_template: checksums.txt
+
+release:
+  github:
+    owner: averyfreeman
+    name: git-shed
+  draft: true
+  use_existing_draft: true
+  replace_existing_artifacts: true
