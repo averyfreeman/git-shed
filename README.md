@@ -1,6 +1,6 @@
 # git-shed
 
-Audit Git checkouts, publish reviewed work, and move recoverable checkouts to system Trash in batches. Go application for macOS and Linux. It defaults to scanning `$HOME/build`.
+Audit Git checkouts, publish reviewed work, and move recoverable checkouts to system Trash in batches. Go application for macOS and Linux. Scans default to the current working directory.
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/averyfreeman/git-shed.svg)](https://pkg.go.dev/github.com/averyfreeman/git-shed)
 
@@ -21,6 +21,8 @@ With Go installed, you can also install the latest source release with `go insta
 Tagged releases publish standalone Linux amd64 archives and `.deb`, `.rpm`, and Arch Linux packages, plus macOS Intel and Apple Silicon `.pkg` installers. The macOS packages are currently unsigned and not notarized; macOS may require additional user approval to install them. Building from source with `make install` remains available on both platforms.
 
 ## Start with a report
+
+`git-shed scan` and `git-shed ui` use the current working directory by default. Use `--root PATH` or provide one positional path to scan elsewhere.
 
 ```sh
 git-shed scan

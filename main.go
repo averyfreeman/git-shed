@@ -10,7 +10,6 @@ import (
 	"io"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"strings"
 	"syscall"
 )
@@ -60,13 +59,9 @@ func run(ctx context.Context, args []string, out, errout io.Writer, input io.Rea
 		fmt.Fprintln(out, version)
 		return nil
 	}
-	home, e := os.UserHomeDir()
-	if e != nil {
-		return e
-	}
 	f := flag.NewFlagSet(cmd, flag.ContinueOnError)
 	f.SetOutput(errout)
-	root := f.String("root", filepath.Join(home, "build"), "scan root")
+	root := f.String("root", ".", "scan root")
 	workers := f.Int("workers", 4, "parallel audit workers (1–32)")
 	verify := f.Bool("verify", false, "freshly verify origin refs and graphs")
 	sizes := f.Bool("sizes", true, "measure approximate logical and allocated disk usage")
@@ -90,7 +85,7 @@ func run(ctx context.Context, args []string, out, errout io.Writer, input io.Rea
 	f.Var(&branches, "branch", "branch to push (repeatable)")
 	f.Var(&tags, "tag", "tag to push (repeatable)")
 	f.Var(&files, "file", "individual file to stage (repeatable)")
-	if e = f.Parse(args[1:]); errors.Is(e, flag.ErrHelp) {
+	if e := f.Parse(args[1:]); errors.Is(e, flag.ErrHelp) {
 		return nil
 	} else if e != nil {
 		return e
